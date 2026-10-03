@@ -6,79 +6,114 @@
 
   <style>
     html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #ffffff;
-    }
-    
-    /* Canvas locked behind everything */
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
+  margin: 0;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow-y: auto;   /* Enable vertical scroll */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #ffffff;
+  scroll-behavior: smooth; /* Smooth scroll when clicking links like #projects */
+}
 
-    /* Overlay explicitly pinned over the full screen */
-      .content-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      padding: 20px;
-      box-sizing: border-box;
-      pointer-events: none;
-    }
+/* Fix canvas to background during scroll */
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+}
 
-    /* Glass card for text visibility */
-    .card {
-      pointer-events: auto;
-      background: rgba(15, 23, 42, 0.8);
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
-      border: 1.5px solid rgba(255, 255, 255, 0.15);
-      padding: 2.5rem;
-      border-radius: 16px;
-      max-width: 500px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-    }
+/* Container for all content sections */
+.content-overlay {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  gap: 80px; /* Space out sections */
+}
 
-    h1 {
-      margin: 0 0 1rem 0;
-      font-size: 2.5rem;
-      color: #ffffff;
-    }
+/* Reusable card section */
+.section-card {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  padding: 2.5rem;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 650px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
 
-    p {
-      color: #cbd5e1;
-      font-size: 1.1rem;
-      line-height: 1.6;
-    }
+/* Fullscreen hero section */
+.hero {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
 
-    .links a {
-      color: #38bdf8;
-      text-decoration: none;
-      font-weight: 600;
-      margin: 0 10px;
-      transition: color 0.2s ease;
-    }
+/* Project grid list */
+.project-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
 
-    .links a:hover {
-      color: #818cf8;
-      text-decoration: underline;
-    }
+.project-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.project-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.project-item h3 {
+  margin: 0 0 5px 0;
+  color: #38bdf8;
+}
+
+.project-item p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+/* Unvisited link */
+.links a {
+  color: #49cef9; /* Default sky blue */
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+/* Visited link (after it has been clicked) */
+.links a:visited {
+  color: #49cef9; /* Also sky blue */
+}
+
+/* Hover state (mouse cursor over link) */
+.links a:hover {
+  color: #818cf8; /* Vibrant rose/pink */
+  text-shadow: 0 0 8px rgba(244, 63, 94, 0.6); /* Optional subtle glow */
+  text-decoration: underline;
+}
+
+/* Active state (moment link is being clicked) */
+.links a:active {
+  color: #bffb5e; /* Lime */
+}
     </style>
 </head>
 
@@ -87,16 +122,50 @@
 <canvas id="canvas"></canvas>
   <!-- Add elements here -->
 <div class="content-overlay">
-  <div class="card">
-    <h1>Anskukisu</h1>
-    <p>Welcome to my personal site! Powered by Python APIs, custom HTML/JS canvas animations, and GitHub Pages.</p>
-    
-    <div class="links">
-      <a href="https://github.com/Anskukisu" target="_blank">GitHub</a>
-      <a href="#projects">Projects</a>
-      <a href="#aboutme">About me</a>
+
+  <!-- Hero / Landing Card -->
+  <section class="hero">
+    <div class="section-card" style="text-align: center;">
+      <h1>Anskukisu</h1>
+      <p>Welcome to my personal site! Powered by custom canvas math, Python tools, and GitHub Pages.</p>
+      
+      <div class="links">
+        <a href="https://github.com/Anskukisu" target="_blank">GitHub</a>
+        <a href="#projects">Projects</a>
+        <a href="#aboutme">About me</a>
+      </div>
     </div>
-  </div>
+  </section>
+
+  <!-- About Me Section -->
+  <section id="aboutme" class="section-card">
+    <h2>About Me</h2>
+    <p>Hi there! I'm a programmer and I am fluent in Python and learning Cython, JS and HTML 5. Now welcome to my little corner of the internet :3</p>
+  </section>
+
+  <!-- Projects Section -->
+  <section id="projects" class="section-card">
+    <h2>Projects</h2>
+    <div class="project-grid">
+      <div class="project-item">
+        <h3>Want to see my repositories?</h3>
+        <p>Go look at my GitHub.</p>
+      </div>
+      <div class="project-item">
+        <h3>Hemoglobin programming language</h3>
+        <p>A programming language I'm making. Currently in progress. Compiler and IDLE will be written in Python.</p>
+      </div>
+
+      <div class="project-item">
+        <h3>Morphing Triangle Background</h3>
+        <p>A dynamic, procedural mesh lattice animation built using HTML5 Canvas & JavaScript.</p>
+      </div>
+      <p><strong>Quick reminder: not all my projects are here or on GitHub. Most are stored on my PC instead :(</strong></p>
+      </div>
+
+    </div>
+  </section>
+
 </div>
 <script>
 const canvas = document.getElementById("canvas");
