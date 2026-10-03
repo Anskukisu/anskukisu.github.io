@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
+  <title>Anskukisu's Website</title>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Animated Triangle Lattice</title>
 
   <style>
     html, body {
@@ -11,7 +10,6 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #080b14;
     }
 
     canvas {
@@ -23,6 +21,7 @@
 </head>
 
 <body>
+
 <canvas id="canvas"></canvas>
 
 <script>
@@ -32,21 +31,374 @@ const ctx = canvas.getContext("2d");
 let width;
 let height;
 
-const spacing = 90;
-const motion = 18;
-const speed = 0.00035;
+
+/* ================================
+   SETTINGS
+================================ */
+
+const CELL_SIZE = 80;
+const JITTER = 25;
+
+const MORPH_TIME = 6000;
+
+
+/*
+ * Edge appearance.
+ */
+const EDGE_COLOR = "rgba(90, 120, 170, 0.28)";
+const EDGE_WIDTH = 1;
+
+
+/*
+ * Triangle appearance.
+ *
+ * Set this to false if you want the
+ * triangles completely invisible.
+ */
+const SHOW_TRIANGLE_GRADIENT = true;
+
+
+/* ================================
+   MESH
+================================ */
 
 let vertices = [];
 let triangles = [];
 
-/*
- * Resize canvas for high-DPI screens.
- */
+let startPositions = [];
+let targetPositions = [];
+
+let morphStart = 0;
+
+
+/* ================================
+   RANDOM LATTICE
+================================ */
+
+function generateLattice() {
+
+  const rows =
+    Math.ceil(height / CELL_SIZE) + 12;
+
+  const cols =
+    Math.ceil(width / CELL_SIZE) + 12;
+
+  const positions = [];
+
+  for (let row = -6; row < rows; row++) {
+
+    for (let col = -6; col < cols; col++) {
+
+      positions.push({
+        x:
+          col * CELL_SIZE +
+          (Math.random() - 0.5) * JITTER,
+
+        y:
+          row * CELL_SIZE +
+          (Math.random() - 0.5) * JITTER
+      });
+    }
+  }
+
+  return positions;
+}
+
+
+/* ================================
+   CREATE TOPOLOGY
+================================ */
+
+function createMesh() {
+
+  vertices = [];
+  triangles = [];
+
+  const rows =
+    Math.ceil(height / CELL_SIZE) + 12;
+
+  const cols =
+    Math.ceil(width / CELL_SIZE) + 12;
+
+  const grid = [];
+
+  /*
+   * First random lattice.
+   */
+  const positions = generateLattice();
+
+  let index = 0;
+
+  for (let row = -6; row < rows; row++) {
+
+    grid[row] = [];
+
+    for (let col = -6; col < cols; col++) {
+
+      const position = positions[index++];
+
+      const vertex = {
+        x: position.x,
+        y: position.y
+      };
+
+      vertices.push(vertex);
+      grid[row][col] = vertex;
+    }
+  }
+
+
+  /*
+   * Build the shared triangles.
+   */
+  for (let row = -6; row < rows - 1; row++) {
+
+    for (let col = -6; col < cols - 1; col++) {
+
+      const a = grid[row][col];
+      const b = grid[row][col + 1];
+      const c = grid[row + 1][col];
+      const d = grid[row + 1][col + 1];
+
+
+      if (Math.random() < 0.5) {
+
+        triangles.push([a, b, d]);
+        triangles.push([a, d, c]);
+
+      } else {
+
+        triangles.push([a, b, c]);
+        triangles.push([b, d, c]);
+      }
+    }
+  }
+
+
+  /*
+   * Start with the current lattice and
+   * immediately generate the next one.
+   */
+  startMorph();
+}
+
+
+/* ================================
+   MORPH
+================================ */
+
+function startMorph() {
+
+  /*
+   * Remember exactly where every vertex
+   * currently is.
+   */
+  startPositions = vertices.map(vertex => ({
+    x: vertex.x,
+    y: vertex.y
+  }));
+
+
+  /*
+   * Completely new random lattice.
+   */
+  targetPositions = generateLattice();
+
+
+  morphStart = performance.now();
+}
+
+
+
+/* ================================
+   UPDATE
+================================ */
+
+function update(time) {
+
+  let t =
+    (time - morphStart) / MORPH_TIME;
+
+
+  /*
+   * When we reach the target,
+   * immediately begin another morph.
+   */
+  if (t >= 1) {
+
+    /*
+     * Ensure we end exactly at the target.
+     */
+    for (let i = 0; i < vertices.length; i++) {
+
+      vertices[i].x = targetPositions[i].x;
+      vertices[i].y = targetPositions[i].y;
+    }
+
+    /*
+     * Immediately start another random lattice.
+     */
+    startMorph();
+
+    t = 0;
+  }
+
+
+
+  /*
+   * Move every shared vertex toward
+   * its corresponding vertex in the target.
+   */
+  for (let i = 0; i < vertices.length; i++) {
+
+    const start = startPositions[i];
+    const target = targetPositions[i];
+    const vertex = vertices[i];
+
+    vertex.x =
+      start.x +
+      (target.x - start.x) * t;
+
+    vertex.y =
+      start.y +
+      (target.y - start.y) * t;
+  }
+}
+
+
+/* ================================
+   BACKGROUND
+================================ */
+
+function drawBackground() {
+
+  const gradient = ctx.createLinearGradient(
+    0,
+    0,
+    width,
+    height
+  );
+
+  gradient.addColorStop(0, "#090d18");
+  gradient.addColorStop(0.45, "#17243d");
+  gradient.addColorStop(1, "#281b3d");
+
+  ctx.fillStyle = gradient;
+
+  ctx.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+}
+
+
+/* ================================
+   DRAW
+================================ */
+
+function draw() {
+
+  drawBackground();
+
+
+  for (const triangle of triangles) {
+
+    const [a, b, c] = triangle;
+
+
+    /*
+     * -----------------------------
+     * Triangle fill
+     * -----------------------------
+     */
+
+    if (SHOW_TRIANGLE_GRADIENT) {
+
+      /*
+       * Gradient follows the triangle.
+       */
+      const gradient = ctx.createLinearGradient(
+        a.x,
+        a.y,
+        c.x,
+        c.y
+      );
+
+      gradient.addColorStop(
+        0,
+        "rgba(80, 130, 220, 0.12)"
+      );
+
+      gradient.addColorStop(
+        0.5,
+        "rgba(150, 100, 220, 0.1)"
+      );
+
+      gradient.addColorStop(
+        1,
+        "rgba(40, 180, 210, 0.3)"
+      );
+
+      ctx.beginPath();
+
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineTo(c.x, c.y);
+
+      ctx.closePath();
+
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+
+
+    /*
+     * -----------------------------
+     * Edge
+     * -----------------------------
+     */
+
+    ctx.beginPath();
+
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.lineTo(c.x, c.y);
+
+    ctx.closePath();
+
+    ctx.strokeStyle = EDGE_COLOR;
+    ctx.lineWidth = EDGE_WIDTH;
+
+    ctx.stroke();
+  }
+}
+
+
+/* ================================
+   ANIMATION
+================================ */
+
+function animate(time) {
+
+  update(time);
+  draw();
+
+  requestAnimationFrame(animate);
+}
+
+
+/* ================================
+   RESIZE
+================================ */
+
 function resize() {
-  const dpr = window.devicePixelRatio || 1;
 
   width = window.innerWidth;
   height = window.innerHeight;
+
+  const dpr = window.devicePixelRatio || 1;
 
   canvas.width = width * dpr;
   canvas.height = height * dpr;
@@ -54,167 +406,33 @@ function resize() {
   canvas.style.width = width + "px";
   canvas.style.height = height + "px";
 
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  createLattice();
-}
-
-
-/*
- * Create the triangular lattice.
- */
-function createLattice() {
-  vertices = [];
-  triangles = [];
-
-  const rowHeight = spacing * Math.sqrt(3) / 2;
-
-  const cols = Math.ceil(width / spacing) + 3;
-  const rows = Math.ceil(height / rowHeight) + 3;
-
-  /*
-   * Create all shared vertices.
-   */
-  for (let row = -2; row < rows; row++) {
-    for (let col = -2; col < cols; col++) {
-
-      const x =
-        col * spacing +
-        (row % 2) * spacing / 2;
-
-      const y = row * rowHeight;
-
-      vertices.push({
-        x,
-        y,
-
-        /*
-         * Each vertex gets its own phase so
-         * neighboring vertices don't move identically.
-         */
-        phaseX: Math.random() * Math.PI * 2,
-        phaseY: Math.random() * Math.PI * 2,
-
-        speedX: 0.7 + Math.random() * 0.6,
-        speedY: 0.7 + Math.random() * 0.6
-      });
-    }
-  }
-
-  /*
-   * Convert the vertex grid into triangles.
-   */
-  for (let row = 0; row < rows - 1; row++) {
-    for (let col = 0; col < cols - 1; col++) {
-
-      const i = row * cols + col;
-
-      if (row % 2 === 0) {
-        triangles.push([i, i + 1, i + cols]);
-        triangles.push([i + 1, i + cols + 1, i + cols]);
-      } else {
-        triangles.push([i, i + 1, i + cols + 1]);
-        triangles.push([i, i + 1 + cols + 1, i + cols]);
-      }
-    }
-  }
-}
-
-
-/*
- * Calculate the current position of a vertex.
- */
-function getVertex(v, time) {
-  return {
-    x: v.x +
-       Math.sin(time * speed * v.speedX + v.phaseX) * motion,
-
-    y: v.y +
-       Math.cos(time * speed * v.speedY + v.phaseY) * motion
-  };
-}
-
-
-/*
- * Draw one triangle.
- */
-function drawTriangle(a, b, c, time) {
-
-  const A = getVertex(a, time);
-  const B = getVertex(b, time);
-  const C = getVertex(c, time);
-
-  /*
-   * Use the triangle's center to determine
-   * its gradient.
-   */
-  const centerX = (A.x + B.x + C.x) / 3;
-  const centerY = (A.y + B.y + C.y) / 3;
-
-  const gradient = ctx.createLinearGradient(
-    A.x,
-    A.y,
-    C.x,
-    C.y
+  ctx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
   );
 
-  /*
-   * Change these colors to whatever palette
-   * you want.
-   */
-  gradient.addColorStop(0, "#182b5c");
-  gradient.addColorStop(0.5, "#315ca8");
-  gradient.addColorStop(1, "#6b4fb3");
-
-  ctx.beginPath();
-
-  ctx.moveTo(A.x, A.y);
-  ctx.lineTo(B.x, B.y);
-  ctx.lineTo(C.x, C.y);
-
-  ctx.closePath();
-
-  ctx.fillStyle = gradient;
-  ctx.fill();
+  createMesh();
 }
 
 
-/*
- * Animation loop.
- */
-function animate(time) {
-
-  ctx.clearRect(0, 0, width, height);
-
-  /*
-   * Dark background.
-   */
-  ctx.fillStyle = "#080b14";
-  ctx.fillRect(0, 0, width, height);
-
-  /*
-   * Draw every triangle.
-   */
-  for (const triangle of triangles) {
-
-    const [a, b, c] = triangle;
-
-    drawTriangle(
-      vertices[a],
-      vertices[b],
-      vertices[c],
-      time
-    );
-  }
-
-  requestAnimationFrame(animate);
-}
+window.addEventListener(
+  "resize",
+  resize
+);
 
 
-window.addEventListener("resize", resize);
+/* ================================
+   START
+================================ */
 
 resize();
+
 requestAnimationFrame(animate);
+
 </script>
 
 </body>
