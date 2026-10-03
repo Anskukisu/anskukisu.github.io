@@ -10,430 +10,243 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #ffffff;
     }
-
+    
+    /* Canvas locked behind everything */
     canvas {
-      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
+      z-index: 1;
     }
-  </style>
+
+    /* Overlay explicitly pinned over the full screen */
+      .content-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    /* Glass card for text visibility */
+    .card {
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      padding: 2.5rem;
+      border-radius: 16px;
+      max-width: 500px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      margin: 0 0 1rem 0;
+      font-size: 2.5rem;
+      color: #ffffff;
+    }
+
+    p {
+      color: #cbd5e1;
+      font-size: 1.1rem;
+      line-height: 1.6;
+    }
+
+    .links a {
+      color: #38bdf8;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 0 10px;
+      transition: color 0.2s ease;
+    }
+
+    .links a:hover {
+      color: #818cf8;
+      text-decoration: underline;
+    }
+    </style>
 </head>
 
 <body>
 
 <canvas id="canvas"></canvas>
-
+  <!-- Add elements here -->
+<div class="content-overlay">
+  <div class="card">
+    <h1>Anskukisu</h1>
+    <p>Welcome to my personal site! Powered by Python APIs, custom HTML/JS canvas animations, and GitHub Pages.</p>
+    
+    <div class="links">
+      <a href="https://github.com/Anskukisu" target="_blank">GitHub</a>
+      <a href="#projects">Projects</a>
+      <a href="#aboutme">About me</a>
+    </div>
+  </div>
+</div>
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-
 let width;
 let height;
-
-
-/* ================================
-   SETTINGS
-================================ */
-
+// BG settings
 const CELL_SIZE = 80;
 const JITTER = 25;
-
 const MORPH_TIME = 6000;
-
-
-/*
- * Edge appearance.
- */
 const EDGE_COLOR = "rgba(90, 120, 170, 0.28)";
 const EDGE_WIDTH = 1;
-
-
-/*
- * Triangle appearance.
- *
- * Set this to false if you want the
- * triangles completely invisible.
- */
 const SHOW_TRIANGLE_GRADIENT = true;
-
-
-/* ================================
-   MESH
-================================ */
-
 let vertices = [];
 let triangles = [];
-
 let startPositions = [];
 let targetPositions = [];
-
 let morphStart = 0;
-
-
-/* ================================
-   RANDOM LATTICE
-================================ */
-
+// Generate lattice
 function generateLattice() {
-
-  const rows =
-    Math.ceil(height / CELL_SIZE) + 12;
-
-  const cols =
-    Math.ceil(width / CELL_SIZE) + 12;
-
+  const rows = Math.ceil(height / CELL_SIZE) + 12;
+  const cols = Math.ceil(width / CELL_SIZE) + 12;
   const positions = [];
-
   for (let row = -6; row < rows; row++) {
-
     for (let col = -6; col < cols; col++) {
-
-      positions.push({
-        x:
-          col * CELL_SIZE +
-          (Math.random() - 0.5) * JITTER,
-
-        y:
-          row * CELL_SIZE +
-          (Math.random() - 0.5) * JITTER
-      });
+      positions.push({x: col * CELL_SIZE + (Math.random() - 0.5) * JITTER, y: row * CELL_SIZE + (Math.random() - 0.5) * JITTER});
     }
   }
-
   return positions;
 }
-
-
-/* ================================
-   CREATE TOPOLOGY
-================================ */
-
+// Create lattice mesh
 function createMesh() {
-
   vertices = [];
   triangles = [];
-
-  const rows =
-    Math.ceil(height / CELL_SIZE) + 12;
-
-  const cols =
-    Math.ceil(width / CELL_SIZE) + 12;
-
+  const rows = Math.ceil(height / CELL_SIZE) + 12;
+  const cols = Math.ceil(width / CELL_SIZE) + 12;
   const grid = [];
-
-  /*
-   * First random lattice.
-   */
   const positions = generateLattice();
-
   let index = 0;
-
   for (let row = -6; row < rows; row++) {
-
     grid[row] = [];
-
     for (let col = -6; col < cols; col++) {
-
       const position = positions[index++];
-
-      const vertex = {
-        x: position.x,
-        y: position.y
-      };
-
+      const vertex = {x: position.x, y: position.y};
       vertices.push(vertex);
       grid[row][col] = vertex;
     }
   }
-
-
-  /*
-   * Build the shared triangles.
-   */
   for (let row = -6; row < rows - 1; row++) {
-
     for (let col = -6; col < cols - 1; col++) {
-
       const a = grid[row][col];
       const b = grid[row][col + 1];
       const c = grid[row + 1][col];
       const d = grid[row + 1][col + 1];
-
-
       if (Math.random() < 0.5) {
-
         triangles.push([a, b, d]);
         triangles.push([a, d, c]);
-
       } else {
-
         triangles.push([a, b, c]);
         triangles.push([b, d, c]);
       }
     }
   }
-
-
-  /*
-   * Start with the current lattice and
-   * immediately generate the next one.
-   */
   startMorph();
 }
-
-
-/* ================================
-   MORPH
-================================ */
-
+// Start morphing
 function startMorph() {
-
-  /*
-   * Remember exactly where every vertex
-   * currently is.
-   */
-  startPositions = vertices.map(vertex => ({
-    x: vertex.x,
-    y: vertex.y
-  }));
-
-
-  /*
-   * Completely new random lattice.
-   */
+  startPositions = vertices.map(vertex => ({x: vertex.x, y: vertex.y}));
   targetPositions = generateLattice();
-
-
   morphStart = performance.now();
 }
-
-
-
-/* ================================
-   UPDATE
-================================ */
-
+// Update bg
 function update(time) {
-
   let t =
     (time - morphStart) / MORPH_TIME;
-
-
-  /*
-   * When we reach the target,
-   * immediately begin another morph.
-   */
   if (t >= 1) {
-
-    /*
-     * Ensure we end exactly at the target.
-     */
     for (let i = 0; i < vertices.length; i++) {
-
       vertices[i].x = targetPositions[i].x;
       vertices[i].y = targetPositions[i].y;
     }
-
-    /*
-     * Immediately start another random lattice.
-     */
     startMorph();
-
     t = 0;
   }
-
-
-
-  /*
-   * Move every shared vertex toward
-   * its corresponding vertex in the target.
-   */
   for (let i = 0; i < vertices.length; i++) {
-
     const start = startPositions[i];
     const target = targetPositions[i];
     const vertex = vertices[i];
-
-    vertex.x =
-      start.x +
-      (target.x - start.x) * t;
-
-    vertex.y =
-      start.y +
-      (target.y - start.y) * t;
+    vertex.x = start.x + (target.x - start.x) * t;
+    vertex.y = start.y + (target.y - start.y) * t;
   }
 }
-
-
-/* ================================
-   BACKGROUND
-================================ */
-
+// Render BG
 function drawBackground() {
-
-  const gradient = ctx.createLinearGradient(
-    0,
-    0,
-    width,
-    height
-  );
-
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
   gradient.addColorStop(0, "#090d18");
   gradient.addColorStop(0.45, "#17243d");
   gradient.addColorStop(1, "#281b3d");
-
   ctx.fillStyle = gradient;
-
-  ctx.fillRect(
-    0,
-    0,
-    width,
-    height
+  ctx.fillRect(0, 0, width, height
   );
 }
-
-
-/* ================================
-   DRAW
-================================ */
-
+// Render current frame
 function draw() {
-
   drawBackground();
-
-
   for (const triangle of triangles) {
-
     const [a, b, c] = triangle;
-
-
-    /*
-     * -----------------------------
-     * Triangle fill
-     * -----------------------------
-     */
-
     if (SHOW_TRIANGLE_GRADIENT) {
-
-      /*
-       * Gradient follows the triangle.
-       */
-      const gradient = ctx.createLinearGradient(
-        a.x,
-        a.y,
-        c.x,
-        c.y
-      );
-
-      gradient.addColorStop(
-        0,
-        "rgba(80, 130, 220, 0.12)"
-      );
-
-      gradient.addColorStop(
-        0.5,
-        "rgba(150, 100, 220, 0.1)"
-      );
-
-      gradient.addColorStop(
-        1,
-        "rgba(40, 180, 210, 0.3)"
-      );
-
+      const gradient = ctx.createLinearGradient(a.x, a.y, c.x, c.y);
+      gradient.addColorStop(0,"rgba(80, 130, 220, 0.12)");
+      gradient.addColorStop(0.5,"rgba(150, 100, 220, 0.1)");
+      gradient.addColorStop(1, "rgba(40, 180, 210, 0.3)");
       ctx.beginPath();
-
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
       ctx.lineTo(c.x, c.y);
-
       ctx.closePath();
-
       ctx.fillStyle = gradient;
       ctx.fill();
     }
-
-
-    /*
-     * -----------------------------
-     * Edge
-     * -----------------------------
-     */
-
     ctx.beginPath();
-
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.lineTo(c.x, c.y);
-
     ctx.closePath();
-
     ctx.strokeStyle = EDGE_COLOR;
     ctx.lineWidth = EDGE_WIDTH;
-
     ctx.stroke();
   }
 }
-
-
-/* ================================
-   ANIMATION
-================================ */
-
+// Render
 function animate(time) {
-
   update(time);
   draw();
-
   requestAnimationFrame(animate);
 }
-
-
-/* ================================
-   RESIZE
-================================ */
-
+// Resize
 function resize() {
-
   width = window.innerWidth;
   height = window.innerHeight;
-
   const dpr = window.devicePixelRatio || 1;
-
   canvas.width = width * dpr;
   canvas.height = height * dpr;
-
   canvas.style.width = width + "px";
   canvas.style.height = height + "px";
-
-  ctx.setTransform(
-    dpr,
-    0,
-    0,
-    dpr,
-    0,
-    0
-  );
-
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   createMesh();
 }
-
-
-window.addEventListener(
-  "resize",
-  resize
-);
-
-
-/* ================================
-   START
-================================ */
-
+window.addEventListener("resize", resize);
 resize();
-
 requestAnimationFrame(animate);
-
 </script>
-
 </body>
 </html>
