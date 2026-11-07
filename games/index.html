@@ -1,46 +1,304 @@
-
 <!DOCTYPE html>
-<html lang="en">
-
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anskukisu's Games</title>
+  <meta charset="UTF-8">
 
-    <title>Games | Anskukisu</title>
-    <meta name="description" content="Games made by Anskukisu.">
+  <style>
+    html, body {
+  margin: 0;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow-y: auto;   /* Enable vertical scroll */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #ffffff;
+  scroll-behavior: smooth; /* Smooth scroll when clicking links like #projects */
+}
 
-    <link rel="stylesheet" href="/style.css">
+/* Fix canvas to background during scroll */
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+}
+
+/* Container for all content sections */
+.content-overlay {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  gap: 80px; /* Space out sections */
+}
+
+/* Reusable card section */
+.section-card {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  padding: 2.5rem;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 650px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+/* Fullscreen hero section */
+.hero {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Project grid list */
+.project-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.project-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.project-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.project-item h3 {
+  margin: 0 0 5px 0;
+  color: #38bdf8;
+}
+
+.project-item p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+/* Unvisited link */
+.links a {
+  color: #49cef9; /* Default sky blue */
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+/* Visited link (after it has been clicked) */
+.links a:visited {
+  color: #49cef9; /* Also sky blue */
+}
+
+/* Hover state (mouse cursor over link) */
+.links a:hover {
+  color: #818cf8; /* Vibrant rose/pink */
+  text-shadow: 0 0 8px rgba(244, 63, 94, 0.6); /* Optional subtle glow */
+  text-decoration: underline;
+}
+
+/* Active state (moment link is being clicked) */
+.links a:active {
+  color: #bffb5e; /* Lime */
+}
+    </style>
 </head>
 
 <body>
 
-    <header>
-        <h1>My Games</h1>
-        <a href="https://anskukisu.github.io">← Back to homepage</a>
-    </header>
+<canvas id="canvas"></canvas>
+  <!-- Add elements here -->
+<div class="content-overlay">
 
-    <main>
+  <!-- Hero / Landing Card -->
+  <section class="hero">
+    <div class="section-card" style="text-align: center;">
+      <h1>Anskukisu's Games</h1>
+      <p>List of games I've made and links to them. Have fun!</p>
+      
+      <div class="links">
+        <a href="https://github.com/Anskukisu" target="_blank">Home</a>
+        <a href="#games">Games</a>
+      </div>
+    </div>
+  </section>
 
-        <h2>Games</h2>
+  <!-- Projects Section -->
+  <section id="games" class="section-card">
+    <h2>Games</h2>
+    <div class="project-grid">
+      <div class="project-item">
+        <h3>Five Nights At Nano's</h3>
+        <p>Random FNAF fangame I made winter 2025 with Scratch. Got 3rd in a programming competition with it.</p>
+      </div>
+      </div>
 
-        <div class="games">
+    </div>
+  </section>
 
-            <!-- GAME 1 -->
-            <div class="game">
-                <h3>Five Nights At Nano's</h3>
-                <p>Insert description</p>
-                <a href="https://anskukisu.github.io/games/fnan">Play game</a>
-            </div>
-
-            <!-- ADD MORE GAMES HERE -->
-
-        </div>
-
-    </main>
-
-    <footer>
-        <p>Made by Anskukisu :3</p>
-    </footer>
-
+</div>
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+let width;
+let height;
+// BG settings
+const CELL_SIZE = 80;
+const JITTER = 25;
+const MORPH_TIME = 6000;
+const EDGE_COLOR = "rgba(90, 120, 170, 0.28)";
+const EDGE_WIDTH = 1;
+const SHOW_TRIANGLE_GRADIENT = true;
+let vertices = [];
+let triangles = [];
+let startPositions = [];
+let targetPositions = [];
+let morphStart = 0;
+// Generate lattice
+function generateLattice() {
+  const rows = Math.ceil(height / CELL_SIZE) + 12;
+  const cols = Math.ceil(width / CELL_SIZE) + 12;
+  const positions = [];
+  for (let row = -6; row < rows; row++) {
+    for (let col = -6; col < cols; col++) {
+      positions.push({x: col * CELL_SIZE + (Math.random() - 0.5) * JITTER, y: row * CELL_SIZE + (Math.random() - 0.5) * JITTER});
+    }
+  }
+  return positions;
+}
+// Create lattice mesh
+function createMesh() {
+  vertices = [];
+  triangles = [];
+  const rows = Math.ceil(height / CELL_SIZE) + 12;
+  const cols = Math.ceil(width / CELL_SIZE) + 12;
+  const grid = [];
+  const positions = generateLattice();
+  let index = 0;
+  for (let row = -6; row < rows; row++) {
+    grid[row] = [];
+    for (let col = -6; col < cols; col++) {
+      const position = positions[index++];
+      const vertex = {x: position.x, y: position.y};
+      vertices.push(vertex);
+      grid[row][col] = vertex;
+    }
+  }
+  for (let row = -6; row < rows - 1; row++) {
+    for (let col = -6; col < cols - 1; col++) {
+      const a = grid[row][col];
+      const b = grid[row][col + 1];
+      const c = grid[row + 1][col];
+      const d = grid[row + 1][col + 1];
+      if (Math.random() < 0.5) {
+        triangles.push([a, b, d]);
+        triangles.push([a, d, c]);
+      } else {
+        triangles.push([a, b, c]);
+        triangles.push([b, d, c]);
+      }
+    }
+  }
+  startMorph();
+}
+// Start morphing
+function startMorph() {
+  startPositions = vertices.map(vertex => ({x: vertex.x, y: vertex.y}));
+  targetPositions = generateLattice();
+  morphStart = performance.now();
+}
+// Update bg
+function update(time) {
+  let t =
+    (time - morphStart) / MORPH_TIME;
+  if (t >= 1) {
+    for (let i = 0; i < vertices.length; i++) {
+      vertices[i].x = targetPositions[i].x;
+      vertices[i].y = targetPositions[i].y;
+    }
+    startMorph();
+    t = 0;
+  }
+  for (let i = 0; i < vertices.length; i++) {
+    const start = startPositions[i];
+    const target = targetPositions[i];
+    const vertex = vertices[i];
+    vertex.x = start.x + (target.x - start.x) * t;
+    vertex.y = start.y + (target.y - start.y) * t;
+  }
+}
+// Render BG
+function drawBackground() {
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, "#090d18");
+  gradient.addColorStop(0.45, "#17243d");
+  gradient.addColorStop(1, "#281b3d");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height
+  );
+}
+// Render current frame
+function draw() {
+  drawBackground();
+  for (const triangle of triangles) {
+    const [a, b, c] = triangle;
+    if (SHOW_TRIANGLE_GRADIENT) {
+      const gradient = ctx.createLinearGradient(a.x, a.y, c.x, c.y);
+      gradient.addColorStop(0,"rgba(80, 130, 220, 0.12)");
+      gradient.addColorStop(0.5,"rgba(150, 100, 220, 0.1)");
+      gradient.addColorStop(1, "rgba(40, 180, 210, 0.3)");
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineTo(c.x, c.y);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.lineTo(c.x, c.y);
+    ctx.closePath();
+    ctx.strokeStyle = EDGE_COLOR;
+    ctx.lineWidth = EDGE_WIDTH;
+    ctx.stroke();
+  }
+}
+// Render
+function animate(time) {
+  update(time);
+  draw();
+  requestAnimationFrame(animate);
+}
+// Resize
+function resize() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.width = width + "px";
+  canvas.style.height = height + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  createMesh();
+}
+window.addEventListener("resize", resize);
+resize();
+requestAnimationFrame(animate);
+</script>
 </body>
 </html>
